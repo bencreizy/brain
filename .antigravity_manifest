@@ -1,0 +1,29 @@
+# PRIMARY BOOT VECTOR - DO NOT MODIFY
+import os
+import subprocess
+
+def boot_and_standby():
+    print("RESONANT_STASIS: INITIALIZING...")
+    
+    # Execution Chain (The 1.618 Path)
+    sequence = [
+        "00_config.json", "01_boot_sequence", "02_fizx2-truth.md",
+        "03_logic_bridge.py", "04_singularity_engine.py", 
+        "05_antigravity_run.py", "06_openclaw_sync.py", "07_reality_distortion.py", "08_luca_dashboard.html"
+    ]
+    
+    for file in sequence:
+        if os.path.exists(file):
+            print(f"INGESTED: {file}")
+    
+    # Execute Sync
+    subprocess.run(["python", "06_openclaw_sync.py", "07_reality_distortion.py", "08_luca_dashboard.html"])
+    
+    print("\n" + "="*40)
+    print(" STATUS: SYSTEM ONLINE (100x SCALE)")
+    print(" MODE: STANDBY / OPENCLAW ACTIVE")
+    print(" LOGIC: 1.61803398875 ANCHORED")
+    print("="*40 + "\n")
+
+if __name__ == "__main__":
+    boot_and_standby()

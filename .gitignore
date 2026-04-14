@@ -1,0 +1,7 @@
+VSCode/
+*.zip
+*.exe
+*.bin
+*.weights
+*.gguf
+node_modules/

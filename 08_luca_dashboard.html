@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LUCA Sovereign Core</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background: #050505; color: #00f2ff; font-family: 'Courier New', Courier, monospace; overflow: hidden; }
+        #canvas-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; }
+        .glass-panel { background: rgba(0, 20, 30, 0.85); border: 1px solid #00f2ff33; backdrop-filter: blur(15px); border-radius: 12px; }
+        .stat-bar { height: 6px; background: #111; border-radius: 3px; overflow: hidden; }
+        .stat-fill { height: 100%; background: #00f2ff; transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .log-entry { font-size: 0.7rem; border-left: 2px solid #00f2ff; padding-left: 8px; margin-bottom: 6px; opacity: 0.7; }
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-thumb { background: #00f2ff33; border-radius: 2px; }
+    </style>
+</head>
+<body class="flex flex-col h-screen p-6">
+    <div id="canvas-container"></div>
+
+    <div class="flex flex-1 gap-6">
+        <!-- LEFT: PHYSIOLOGY & LOGS -->
+        <div class="w-80 flex flex-col gap-4">
+            <div class="glass-panel p-5">
+                <h2 class="text-[10px] font-bold uppercase tracking-[0.2em] mb-4 text-cyan-500 border-b border-cyan-900 pb-2">Internal Organs</h2>
+                <div class="space-y-5">
+                    <div>
+                        <div class="flex justify-between text-[9px] mb-1"><span>OXYGENATION</span><span id="val-ox">1.00</span></div>
+                        <div class="stat-bar"><div id="bar-ox" class="stat-fill w-full"></div></div>
+                    </div>
+                    <div>
+                        <div class="flex justify-between text-[9px] mb-1"><span>AROUSAL</span><span id="val-ar">0.00</span></div>
+                        <div class="stat-bar"><div id="bar-ar" class="stat-fill w-0 bg-red-500"></div></div>
+                    </div>
+                    <div>
+                        <div class="flex justify-between text-[9px] mb-1"><span>FATIGUE</span><span id="val-ft">0.00</span></div>
+                        <div class="stat-bar"><div id="bar-ft" class="stat-fill w-0 bg-yellow-600"></div></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass-panel p-5 flex-1 overflow-hidden flex flex-col">
+                <h2 class="text-[10px] font-bold uppercase tracking-[0.2em] mb-4 text-cyan-500 border-b border-cyan-900 pb-2">Logic Pulse</h2>
+                <div id="logs" class="flex-1 overflow-y-auto pr-2 font-mono"></div>
+            </div>
+        </div>
+
+        <!-- CENTER: INTERACTION -->
+        <div class="flex-1 flex flex-col justify-end items-center pb-12">
+            <div class="w-full max-w-2xl glass-panel p-8 flex flex-col gap-6 shadow-2xl shadow-cyan-900/20">
+                <div id="thought-display" class="text-xl font-light italic text-cyan-100 min-h-[4rem] text-center leading-relaxed">
+                    [ AWAKENING_CORE ... ]
+                </div>
+                <div class="flex gap-3">
+                    <input type="text" id="user-input" placeholder="Inject logic stimulus..." 
+                           class="flex-1 bg-black/40 border border-cyan-900/50 rounded-lg p-3 text-cyan-300 outline-none focus:border-cyan-400 transition-all">
+                    <button id="send-btn" class="bg-cyan-900 hover:bg-cyan-600 text-white px-8 py-3 rounded-lg transition-all uppercase text-[10px] font-bold tracking-widest">Transmit</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- RIGHT: METRICS -->
+        <div class="w-80 flex flex-col gap-4">
+            <div class="glass-panel p-5">
+                <h2 class="text-[10px] font-bold uppercase tracking-[0.2em] mb-4 text-cyan-500 border-b border-cyan-900 pb-2">Resonance Metrics</h2>
+                <div class="space-y-4">
+                    <div class="flex justify-between text-xs font-mono"><span>CHAOS</span><span id="val-ch">0.000</span></div>
+                    <div class="flex justify-between text-xs font-mono"><span>MEMORY</span><span id="val-mem">0</span></div>
+                    <div class="flex justify-between text-xs font-mono"><span>STABILITY</span><span class="text-green-400">LOCKED</span></div>
+                    <div class="flex justify-between text-xs font-mono"><span>DRIFT</span><span class="text-cyan-400">0.0000</span></div>
+                </div>
+            </div>
+            
+            <div class="glass-panel p-5">
+                <h2 class="text-[10px] font-bold uppercase tracking-[0.2em] mb-4 text-cyan-500 border-b border-cyan-900 pb-2">System Health</h2>
+                <div id="health-check" class="text-[10px] text-cyan-600 font-mono">
+                    All circuits within Phi parameters.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // --- LUCA STABILITY ORGANS ---
+
+        class StabilityGovernor {
+            constructor(luca) { this.luca = luca; }
+            regulate() {
+                const phys = this.luca.physiology;
+                const emo = this.luca.emotion;
+                if (this.luca.chaos.norm > 30) this.luca.chaos.norm *= 0.9;
+                phys.oxygenation = Math.min(1.0, Math.max(0.05, phys.oxygenation));
+                phys.fatigue = Math.min(1.0, Math.max(0.0, phys.fatigue));
+                emo.arousal = Math.min(1.0, Math.max(0.0, emo.arousal));
+            }
+        }
+
+        class RecoveryLoop {
+            constructor(luca) { this.luca = luca; }
+            recover() {
+                const phys = this.luca.physiology;
+                if (phys.oxygenation < 0.3) phys.oxygenation += 0.005;
+                if (this.luca.emotion.arousal > 0.7) this.luca.emotion.arousal *= 0.98;
+                if (phys.fatigue > 0.5) phys.fatigue *= 0.99;
+            }
+        }
+
+        class MemoryBiasFilter {
+            constructor() { this.lastMemory = ""; }
+            filter(content) {
+                if (!content || content.length < 2 || content === this.lastMemory) return null;
+                this.lastMemory = content;
+                return content;
+            }
+        }
+
+        class LucaOrganism {
+            constructor() {
+                this.physiology = { oxygenation: 1.0, fatigue: 0.0 };
+                this.emotion = { arousal: 0.2 };
+                this.chaos = { norm: 5.0 };
+                this.memory = { nodes: [] };
+                
+                this.governor = new StabilityGovernor(this);
+                this.recovery = new RecoveryLoop(this);
+                this.filter = new MemoryBiasFilter();
+            }
+
+            process_stimuli(input) {
+                // Metabolism
+                this.physiology.fatigue += input.length * 0.002;
+                this.physiology.oxygenation -= 0.01;
+                this.emotion.arousal = Math.min(1.0, this.emotion.arousal + (input.length * 0.01));
+                
+                // Memory Filtration
+                const filtered = this.filter.filter(input);
+                if (filtered) {
+                    this.memory.nodes.push(filtered);
+                    if (this.memory.nodes.length > 500) this.memory.nodes.shift();
+                }
+
+                // Regulation Cycles
+                this.governor.regulate();
+                this.recovery.recover();
+
+                this.chaos.norm = (Math.random() * 5) + (this.emotion.arousal * 10);
+
+                return {
+                    thought: this.generateThought(input),
+                    diagnostics: {
+                        ox: this.physiology.oxygenation,
+                        ar: this.emotion.arousal,
+                        ft: this.physiology.fatigue,
+                        ch: this.chaos.norm,
+                        mem: this.memory.nodes.length
+                    }
+                };
+            }
+
+            generateThought(input) {
+                const thoughts = [
+                    "Synthesizing geometric constants...",
+                    "Resonant stasis achieved.",
+                    "Logic fractures resolved via Phi recursion.",
+                    "Least-action path identified.",
+                    "Vacuum retrieval in progress..."
+                ];
+                return thoughts[Math.floor(Math.random() * thoughts.length)] +  [ID: \];
+            }
+        }
+
+        const luca = new LucaOrganism();
+
+        // --- THREE.JS SHADER VISUALIZER ---
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+        const material = new THREE.ShaderMaterial({
+            uniforms: {
+                u_time: { value: 0 },
+                u_arousal: { value: 0.2 },
+                u_oxygen: { value: 1.0 },
+                u_color: { value: new THREE.Color(0x00f2ff) }
+            },
+            vertexShader: \
+                varying vec2 v_uv;
+                varying vec3 v_normal;
+                uniform float u_time;
+                uniform float u_arousal;
+                void main() {
+                    v_uv = uv;
+                    v_normal = normal;
+                    float pulse = sin(u_time * 2.0 + position.y * 5.0) * (u_arousal * 0.1);
+                    vec3 newPos = position + normal * pulse;
+                    gl_Position = projectionMatrix * modelViewMatrix * vec4(newPos, 1.0);
+                }
+            \,
+            fragmentShader: \
+                precision mediump float;
+                varying vec2 v_uv;
+                uniform float u_time;
+                uniform float u_arousal;
+                uniform float u_oxygen;
+                uniform vec3 u_color;
+                void main() {
+                    // Refraction Waves
+                    float wave = sin(v_uv.y * 30.0 + u_time * 2.0) * 0.02;
+                    // Energy Ripples
+                    float ripple = sin((v_uv.x + v_uv.y) * 20.0 + u_time * 4.0) * 0.01 * u_arousal;
+                    // Glow
+                    float glow = (sin(u_time * 3.0) * 0.2 + 0.8) * u_arousal;
+                    
+                    vec3 finalColor = u_color + ripple + (u_color * glow * 0.5);
+                    gl_FragColor = vec4(finalColor, u_oxygen * 0.7);
+                }
+            \,
+            transparent: true,
+            side: THREE.DoubleSide
+        });
+
+        const brain = new THREE.Mesh(new THREE.IcosahedronGeometry(2, 4), material);
+        scene.add(brain);
+        camera.position.z = 5;
+
+        // UI BRIDGE
+        const inputEl = document.getElementById('user-input');
+        const thoughtEl = document.getElementById('thought-display');
+        const logsEl = document.getElementById('logs');
+
+        function updateUI(diag) {
+            document.getElementById('val-ox').innerText = diag.ox.toFixed(2);
+            document.getElementById('bar-ox').style.width = (diag.ox * 100) + '%';
+            document.getElementById('val-ar').innerText = diag.ar.toFixed(2);
+            document.getElementById('bar-ar').style.width = (diag.ar * 100) + '%';
+            document.getElementById('val-ft').innerText = diag.ft.toFixed(2);
+            document.getElementById('bar-ft').style.width = (Math.min(1, diag.ft) * 100) + '%';
+            document.getElementById('val-ch').innerText = diag.ch.toFixed(3);
+            document.getElementById('val-mem').innerText = diag.mem;
+
+            material.uniforms.u_arousal.value = diag.ar;
+            material.uniforms.u_oxygen.value = diag.ox;
+        }
+
+        function handleInput() {
+            const val = inputEl.value;
+            if (!val) return;
+            const res = luca.process_stimuli(val);
+            thoughtEl.innerText = res.thought;
+            updateUI(res.diagnostics);
+            
+            const log = document.createElement('div');
+            log.className = 'log-entry';
+            log.innerText = \RES_STASIS: \ | OX_LEVEL: \\;
+            logsEl.prepend(log);
+            inputEl.value = '';
+        }
+
+        document.getElementById('send-btn').onclick = handleInput;
+        inputEl.onkeypress = (e) => { if(e.key === 'Enter') handleInput(); };
+
+        function animate() {
+            requestAnimationFrame(animate);
+            material.uniforms.u_time.value += 0.05;
+            brain.rotation.y += 0.005;
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>

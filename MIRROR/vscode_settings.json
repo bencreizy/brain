@@ -1,0 +1,12 @@
+{
+    "workbench.colorTheme": "Default Dark Modern",
+    "editor.fontFamily": "'JetBrains Mono', 'Fira Code', monospace",
+    "editor.fontSize": 14,
+    "editor.lineHeight": 1.618,
+    "terminal.integrated.fontSize": 12,
+    "files.autoSave": "onFocusChange",
+    "editor.minimap.enabled": false,
+    "workbench.startupEditor": "none",
+    "explorer.confirmDelete": false,
+    "explorer.confirmDragAndDrop": false
+}

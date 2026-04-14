@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "name": "fizx2-sovereign-core",
+  "builds": [
+    { "src": "08_luca_dashboard.html", "use": "@vercel/static" }
+  ],
+  "rewrites": [
+    { "source": "/(.*)", "destination": "08_luca_dashboard.html" }
+  ]
+}
